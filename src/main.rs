@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate strangeio;
 use strangeio::*;
 use std::ops::DerefMut;
@@ -6,7 +7,7 @@ use std::ops::DerefMut;
 struct MegaUnit {
     label: String,
     unit_type: String,
-    state: UnitState
+    state: RackSignal
 }
 
 impl MegaUnit {
@@ -14,7 +15,7 @@ impl MegaUnit {
         MegaUnit {
             label: label,
             unit_type: "MegaUnit".to_string(),
-            state: UnitState::Idle,
+            state: RackSignal::Idle,
         }
     }
 }
@@ -22,16 +23,12 @@ impl MegaUnit {
 
 impl RackUnit for MegaUnit {
     fn init(&mut self) {
-        self.state = UnitState::Ready;
+        self.state = RackSignal::Active;
         self.unit_msg("Initialised");
     }
 
     fn cycle(&mut self) {
-        match self.state {
-            UnitState::Idle => self.init(),
-
-            _ => self.unit_msg("Cycling")
-        }
+        self.unit_msg("Cycling")
     }
 
     fn get_unit_label(&self) -> &str {
@@ -40,6 +37,15 @@ impl RackUnit for MegaUnit {
 
     fn get_unit_type(&self) -> &str {
         &self.unit_type
+    }
+
+    fn get_unit_state(&self) -> RackSignal {
+        self.state
+    }
+
+    fn feed(&mut self) -> FeedBlock {
+        let samples: PcmSample = (300.00);
+        feed_block!("audio_out", samples)
     }
 
 }
