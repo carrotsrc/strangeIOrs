@@ -24,6 +24,12 @@ pub enum UnitState {
 }
 
 #[derive(Copy, Clone)]
+pub enum FeedSignal {
+    Ok,
+    Wait
+}
+
+#[derive(Copy, Clone)]
 pub enum RackSignal {
     Idle,
     Active,
@@ -39,7 +45,7 @@ pub trait RackUnit {
 
     fn get_unit_label(&self) -> &str;
     fn get_unit_type(&self) -> &str;
-    fn get_unit_state(&self) -> RackSignal;
+    fn get_unit_signal(&self) -> RackSignal;
 
     fn unit_msg(&self, msg: &str) {
         println!("{} [{}]: {}", self.get_unit_label(), self.get_unit_type(), msg);
@@ -50,10 +56,8 @@ pub trait RackUnit {
         match signal_state {
 
             RackSignal::AC =>  {
-                let s = self.get_unit_state();
 
-                match self.get_unit_state() {
-
+                match self.get_unit_signal() {
                     RackSignal::Idle =>  self.init(),
                     RackSignal::Active => self.cycle(),
                     _ => { }

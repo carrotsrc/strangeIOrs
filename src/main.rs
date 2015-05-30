@@ -4,24 +4,24 @@ use strangeio::*;
 use std::ops::DerefMut;
 
 
-struct MegaUnit {
+struct TestRig {
     label: String,
     unit_type: String,
     state: RackSignal
 }
 
-impl MegaUnit {
-    fn new(label: String) -> MegaUnit {
-        MegaUnit {
+impl TestRig {
+    fn new(label: String) -> TestRig {
+        TestRig {
             label: label,
-            unit_type: "MegaUnit".to_string(),
+            unit_type: "TestRig".to_string(),
             state: RackSignal::Idle,
         }
     }
 }
 
 
-impl RackUnit for MegaUnit {
+impl RackUnit for TestRig {
     fn init(&mut self) {
         self.state = RackSignal::Active;
         self.unit_msg("Initialised");
@@ -39,7 +39,7 @@ impl RackUnit for MegaUnit {
         &self.unit_type
     }
 
-    fn get_unit_state(&self) -> RackSignal {
+    fn get_unit_signal(&self) -> RackSignal {
         self.state
     }
 
@@ -50,8 +50,8 @@ impl RackUnit for MegaUnit {
 
 }
 
-fn create_MegaUnit(label: String) -> MegaUnit {
-    MegaUnit::new(label)
+fn create_TestRig(label: String) -> TestRig {
+    TestRig::new(label)
 }
 
 
@@ -67,8 +67,8 @@ struct UnitConnection {
 
 
 fn main() {
-    let mut u = create_MegaUnit("foobar".to_string());
-    let mut v = create_MegaUnit("foobar2".to_string());
+    let mut u = create_TestRig("foobar".to_string());
+    let mut v = create_TestRig("foobar2".to_string());
     let mut uh = UnitHolder::new();
 
     let s = uh.add_unit(Box::new(u));
