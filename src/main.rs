@@ -32,11 +32,11 @@ impl ProcessorUnit for TestRig {
         self.unit_msg("Initialised");
     }
 
-    fn cycle(&mut self, connections: &mut Vec<UnitConnection>, sock: Option<&mut UnitConnection>) {
+    fn cycle(&mut self, connections: &mut Vec<UnitConnection>, sock: Option<&mut UnitConnection>)
+    ->  FeedSignal {
         self.unit_msg("Cycling");
-        for c in connections {
-            println!("{}", c.plug);
-        }
+
+        FeedSignal::Ok {plug:0}
     }
 
     fn get_unit_label(&self) -> &str {

@@ -18,7 +18,8 @@ macro_rules! feed_block {
 
 #[derive(Copy, Clone)]
 pub enum FeedSignal {
-    Ok,
+    Ready,
+    Ok { plug: i32 },
     Wait,
     Failure
 }
@@ -50,7 +51,7 @@ macro_rules! gen_connection {
             dst_index: 0,
             sock: String::new(),
 
-            signal: FeedSignal::Ok,
+            signal: FeedSignal::Ready,
             block: None,
         }
     }
@@ -59,7 +60,7 @@ macro_rules! gen_connection {
 
 pub trait ProcessorUnit {
     fn init(&mut self);
-    fn cycle(&mut self, connections: &mut Vec<UnitConnection>, sock: Option<&mut UnitConnection>);
+    fn cycle(&mut self, connections: &mut Vec<UnitConnection>, sock: Option<&mut UnitConnection>) -> FeedSignal;
     fn feed(&mut self) -> FeedBlock;
     fn build_scheme(&mut self) -> Vec<UnitConnection>;
 
@@ -95,7 +96,7 @@ impl UnitContainer {
 
                 match self.unit.get_unit_signal() {
                     RackSignal::Idle =>  self.unit.init(),
-                    RackSignal::Active => self.unit.cycle(&mut self.connections, None),
+                    RackSignal::Active => { self.unit.cycle(&mut self.connections, None); },
                     _ => { }
                 }
             }
