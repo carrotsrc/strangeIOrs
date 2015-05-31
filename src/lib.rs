@@ -1,6 +1,6 @@
+use std::cell::{RefCell,RefMut};
+use std::ops::{DerefMut};
 pub type PcmSample = (f32);
-use std::marker::Copy;
-
 pub struct FeedBlock {
     pub out: String, 
     pub samples: Box<PcmSample>
@@ -16,17 +16,11 @@ macro_rules! feed_block {
     }
 }
 
-pub enum UnitState {
-    Idle,
-    Init,
-    Active,
-    Failure
-}
-
 #[derive(Copy, Clone)]
 pub enum FeedSignal {
     Ok,
-    Wait
+    Wait,
+    Failure
 }
 
 #[derive(Copy, Clone)]
@@ -37,11 +31,37 @@ pub enum RackSignal {
     AC,
 }
 
+pub struct UnitConnection {
+    pub src_index: i32,
+    pub plug: String,
+    pub dst_index: i32,
+    pub sock: String,
 
-pub trait RackUnit {
+    pub signal: FeedSignal,
+    pub block: Option<Box<PcmSample>>,
+}
+
+#[macro_export]
+macro_rules! gen_connection {
+    ($name: expr) => {
+        UnitConnection {
+            src_index: 0,
+            plug: $name,
+            dst_index: 0,
+            sock: String::new(),
+
+            signal: FeedSignal::Ok,
+            block: None,
+        }
+    }
+}
+
+
+pub trait ProcessorUnit {
     fn init(&mut self);
-    fn cycle(&mut self);
+    fn cycle(&mut self, connections: &mut Vec<UnitConnection>, sock: Option<&mut UnitConnection>);
     fn feed(&mut self) -> FeedBlock;
+    fn build_scheme(&mut self) -> Vec<UnitConnection>;
 
     fn get_unit_label(&self) -> &str;
     fn get_unit_type(&self) -> &str;
@@ -51,15 +71,31 @@ pub trait RackUnit {
         println!("{} [{}]: {}", self.get_unit_label(), self.get_unit_type(), msg);
     }
 
+
+}
+
+pub struct UnitContainer {
+    unit: Box<ProcessorUnit>,
+    connections: Vec<UnitConnection>,
+}
+
+impl UnitContainer {
+    fn new(mut unit: Box<ProcessorUnit>) -> UnitContainer {
+        UnitContainer {
+            connections: unit.build_scheme(),
+            unit: unit,
+        }
+    }
+
     fn rack_signal(&mut self, signal_state: RackSignal) -> RackSignal {
 
         match signal_state {
 
             RackSignal::AC =>  {
 
-                match self.get_unit_signal() {
-                    RackSignal::Idle =>  self.init(),
-                    RackSignal::Active => self.cycle(),
+                match self.unit.get_unit_signal() {
+                    RackSignal::Idle =>  self.unit.init(),
+                    RackSignal::Active => self.unit.cycle(&mut self.connections, None),
                     _ => { }
                 }
             }
@@ -67,13 +103,12 @@ pub trait RackUnit {
             _ => { }
 
         }
-
         RackSignal::Active
     }
 }
 
 pub struct UnitHolder {
-    units: Vec<Box<RackUnit>>
+    units: Vec<RefCell<UnitContainer>>
 }
 
 impl UnitHolder {
@@ -83,18 +118,14 @@ impl UnitHolder {
             }
         }
 
-        pub fn add_unit(&mut self, unit: Box<RackUnit>) -> u32 {
-            self.units.push(unit);
+        pub fn add_unit(&mut self, unit: Box<ProcessorUnit>) -> u32 {
+            self.units.push(RefCell::new(UnitContainer::new(unit)));
 
             self.units.len() as u32
         }
 
-        pub fn get_unit(&mut self, index: usize) -> &mut RackUnit {
-            &mut *self.units[0]
-        }
-
-        pub fn get_ref(&self, index: usize) -> &Box<RackUnit> {
-            &self.units[0]
+        pub fn get_unit(&mut self, index: usize) -> RefMut<UnitContainer> {
+            self.units[index].borrow_mut()
         }
 
         pub fn get_size(&self) -> i32 {
@@ -102,25 +133,8 @@ impl UnitHolder {
         }
 }
 
-struct Rack {
-    rack_state: RackSignal
-}
-
-impl Rack {
-    fn new() -> Rack {
-        Rack {
-            rack_state: RackSignal::Idle
-        }
-    }
-
-    fn get_state(&self) -> &RackSignal {
-        &self.rack_state
-    }
-
-}
-
 pub fn cycle_rack(holder: &mut UnitHolder) {
-    let unit = holder.get_unit(0);
-    unit.rack_signal(RackSignal::AC);
+    let mut unit = holder.get_unit(0);
+    unit.deref_mut().rack_signal(RackSignal::AC);
 }
 

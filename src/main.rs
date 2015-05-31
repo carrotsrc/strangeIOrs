@@ -7,7 +7,10 @@ use std::ops::DerefMut;
 struct TestRig {
     label: String,
     unit_type: String,
-    state: RackSignal
+    state: RackSignal,
+
+    pub connections: Vec<UnitConnection>,
+
 }
 
 impl TestRig {
@@ -16,19 +19,24 @@ impl TestRig {
             label: label,
             unit_type: "TestRig".to_string(),
             state: RackSignal::Idle,
+            connections: Vec::new() 
         }
     }
+
 }
 
 
-impl RackUnit for TestRig {
+impl ProcessorUnit for TestRig {
     fn init(&mut self) {
         self.state = RackSignal::Active;
         self.unit_msg("Initialised");
     }
 
-    fn cycle(&mut self) {
-        self.unit_msg("Cycling")
+    fn cycle(&mut self, connections: &mut Vec<UnitConnection>, sock: Option<&mut UnitConnection>) {
+        self.unit_msg("Cycling");
+        for c in connections {
+            println!("{}", c.plug);
+        }
     }
 
     fn get_unit_label(&self) -> &str {
@@ -48,38 +56,26 @@ impl RackUnit for TestRig {
         feed_block!("audio_out", samples)
     }
 
+    fn build_scheme(&mut self) -> Vec<UnitConnection> {
+        vec![
+        gen_connection!("audio_out".to_string()),
+        ]
+    }
 }
 
-fn create_TestRig(label: String) -> TestRig {
+fn create_TestRig (label: String) -> TestRig {
     TestRig::new(label)
 }
 
-
-
-struct UnitConnection {
-    sindex: u32,
-    plug: String,
-
-    dindex: u32,
-    sock: String
-}
-
-
-
 fn main() {
     let mut u = create_TestRig("foobar".to_string());
-    let mut v = create_TestRig("foobar2".to_string());
+    let v = create_TestRig("foobar2".to_string());
+
     let mut uh = UnitHolder::new();
 
     let s = uh.add_unit(Box::new(u));
     let d = uh.add_unit(Box::new(v));
 
-    let conA = UnitConnection {
-        sindex: s,
-        plug: "audio_out".to_string(),
-        dindex: d,
-        sock: "audio_in".to_string()
-    };
 
     cycle_rack(&mut uh);
     cycle_rack(&mut uh);
